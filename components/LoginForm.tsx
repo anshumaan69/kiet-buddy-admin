@@ -31,8 +31,13 @@ export default function LoginForm() {
     } else {
       // Refresh the router to ensure session state is updated
       router.refresh();
-      // Redirect to callbackUrl or default to home/dashboard
+      
+      // If callbackUrl is default, we can manually check and push for speed
+      // but router.push(callbackUrl) to / will trigger our robust app/page.tsx
       router.push(callbackUrl);
+      
+      // Force a slight delay and push if it seems stuck, or just rely on router.push
+      // In Next.js App Router, router.push('/') should work fine.
     }
   };
 

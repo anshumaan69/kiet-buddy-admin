@@ -13,6 +13,9 @@ export default async function Home() {
     redirect('/super-admin');
   } else if (session.user.role === 'admin') {
     redirect('/department');
+  } else {
+    // If for some reason the role is missing or unknown, redirect to login
+    redirect('/login');
   }
 
   return null;

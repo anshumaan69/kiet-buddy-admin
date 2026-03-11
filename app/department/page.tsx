@@ -19,10 +19,13 @@ export default function DepartmentAdminDashboard() {
   useEffect(() => {
     if (status === 'unauthenticated') {
       router.push('/login');
-    } else if (session?.user?.role && session.user.role !== 'admin') {
-      router.push('/unauthorized');
     } else if (status === 'authenticated') {
-      fetchHistory();
+      const role = session?.user?.role;
+      if (role !== 'admin' && role !== 'superadmin') {
+        router.push('/unauthorized');
+      } else {
+        fetchHistory();
+      }
     }
   }, [status, session, router]);
 
