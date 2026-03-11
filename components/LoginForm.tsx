@@ -1,11 +1,14 @@
 'use client';
 
 import { signIn } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useState } from 'react';
 
 export default function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const callbackUrl = searchParams.get('callbackUrl') || '/';
+  
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -26,11 +29,10 @@ export default function LoginForm() {
       setError(res.error);
       setLoading(false);
     } else {
-      // Middleware will handle redirection after we push to a protected route,
-      // or we can explicitly route based on role if we fetch the session.
-      // Let's go to root, where we can have a generic redirector or header
-      router.push('/');
+      // Refresh the router to ensure session state is updated
       router.refresh();
+      // Redirect to callbackUrl or default to home/dashboard
+      router.push(callbackUrl);
     }
   };
 
