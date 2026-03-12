@@ -4,6 +4,7 @@ import path from 'path';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../../../lib/auth';
 import dbConnect from '../../../lib/mongodb';
+import { uploadBufferToS3 } from '../../../lib/s3';
 import { ExtractedData } from '../../../models/ExtractedData';
 import pdfParse from 'pdf-parse';
 
@@ -23,21 +24,15 @@ export async function POST(req: Request) {
 
     const buffer = Buffer.from(await file.arrayBuffer());
     
-    // Save the file for the scraper
-    const scraperUploadDir = path.join(process.cwd(), '..', 'kiet-scraper', 'downloads', 'uploads');
-    try {
-      await fs.mkdir(scraperUploadDir, { recursive: true });
-    } catch (err) {
-      console.warn('Directory already exists or could not be created', err);
-    }
-
+    // Upload to S3 instead of local filesystem
     const fileName = `${Date.now()}-${(file as any).name || 'uploaded-file.pdf'}`;
-    const filePath = path.join(scraperUploadDir, fileName);
-    await fs.writeFile(filePath, buffer);
+    const s3Path = `uploads/${fileName}`;
+    
+    const s3Url = await uploadBufferToS3(buffer, s3Path, file.type || 'application/pdf');
 
     return NextResponse.json({ 
-      message: 'File uploaded successfully', 
-      filePath: filePath 
+      message: 'File uploaded successfully to S3', 
+      filePath: s3Url 
     });
 
   } catch (error: any) {

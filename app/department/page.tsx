@@ -10,10 +10,13 @@ export default function DepartmentAdminDashboard() {
   const router = useRouter();
 
   const [history, setHistory] = useState<any[]>([]);
+  const [categories, setCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [uploadCategory, setUploadCategory] = useState('');
+  const [showAddCategory, setShowAddCategory] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
   const [selectedData, setSelectedData] = useState<any>(null);
 
   useEffect(() => {
@@ -25,6 +28,7 @@ export default function DepartmentAdminDashboard() {
         router.push('/unauthorized');
       } else {
         fetchHistory();
+        fetchCategories();
       }
     }
   }, [status, session, router]);
@@ -38,6 +42,43 @@ export default function DepartmentAdminDashboard() {
       }
     } catch (err) {
       console.error('Failed to fetch scrape history', err);
+    }
+  };
+
+  const fetchCategories = async () => {
+    try {
+      const res = await fetch('/api/categories');
+      if (res.ok) {
+        const data = await res.json();
+        setCategories(data);
+      }
+    } catch (err) {
+      console.error('Failed to fetch categories', err);
+    }
+  };
+
+  const handleAddCategory = async () => {
+    if (!newCategoryName) return;
+    setLoading(true);
+    try {
+      const res = await fetch('/api/categories', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: newCategoryName }),
+      });
+      if (res.ok) {
+        setNewCategoryName('');
+        setShowAddCategory(false);
+        fetchCategories();
+        setSuccess('Category added successfully!');
+      } else {
+        const data = await res.json();
+        setError(data.error || 'Failed to add category');
+      }
+    } catch (err) {
+      setError('Failed to add category');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -139,15 +180,34 @@ export default function DepartmentAdminDashboard() {
             {error && <div className="mb-4 text-sm text-red-600 bg-red-50 p-3 rounded-lg border border-red-100">{error}</div>}
             {success && <div className="mb-4 text-sm text-green-600 bg-green-50 p-3 rounded-lg border border-green-100">{success}</div>}
             
-            <div className="space-y-4">
-              <p className="text-sm text-gray-600">
-                Clicking the button below will spawn the background Python script <code>kiet-scraper</code>. It will visit the targets, parse PDFs, generate the aggregated JSON data, and store the results directly in MongoDB.
-              </p>
-              <button
-                onClick={() => handleTriggerScrape()}
-                disabled={loading}
-                className="w-full bg-indigo-600 text-white rounded-lg px-4 py-3 font-medium hover:bg-indigo-700 transition shadow-md disabled:opacity-50 disabled:cursor-wait flex justify-center items-center"
-              >
+              <div className="space-y-4">
+                <p className="text-sm text-gray-600">
+                  Clicking the button below will spawn the background Python script <code>kiet-scraper</code>. It will visit the targets, parse PDFs, and store results in MongoDB.
+                </p>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Target Category (Optional)
+                  </label>
+                  <select
+                    value={uploadCategory}
+                    onChange={(e) => setUploadCategory(e.target.value)}
+                    className="block w-full text-sm text-gray-900 border border-gray-300 rounded-lg bg-white focus:outline-none p-2 mb-4"
+                  >
+                    <option value="">Automated Scrape (Default)</option>
+                    {categories.map((cat) => (
+                      <option key={`${cat._id}-full`} value={cat.name}>
+                        {cat.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <button
+                  onClick={() => handleTriggerScrape(undefined, uploadCategory)}
+                  disabled={loading}
+                  className="w-full bg-indigo-600 text-white rounded-lg px-4 py-3 font-medium hover:bg-indigo-700 transition shadow-md disabled:opacity-50 disabled:cursor-wait flex justify-center items-center"
+                >
                 {loading ? (
                   <>
                     <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -173,13 +233,48 @@ export default function DepartmentAdminDashboard() {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Category Name
                 </label>
-                <input
-                  type="text"
-                  placeholder="e.g. Fees, Exam, Admission"
-                  value={uploadCategory}
-                  onChange={(e) => setUploadCategory(e.target.value)}
-                  className="block w-full text-sm text-gray-900 border border-gray-300 rounded-lg bg-gray-50 focus:outline-none p-2 mb-4"
-                />
+                <div className="flex gap-2 mb-4">
+                  <select
+                    value={uploadCategory}
+                    onChange={(e) => setUploadCategory(e.target.value)}
+                    className="block w-full text-sm text-gray-900 border border-gray-300 rounded-lg bg-white focus:outline-none p-2"
+                  >
+                    <option value="">Select a Category</option>
+                    {categories.map((cat) => (
+                      <option key={cat._id} value={cat.name}>
+                        {cat.name}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    onClick={() => setShowAddCategory(!showAddCategory)}
+                    className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg border border-indigo-200 transition-colors"
+                    title="Add new category"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                    </svg>
+                  </button>
+                </div>
+
+                {showAddCategory && (
+                  <div className="mt-2 mb-4 p-3 bg-indigo-50 rounded-lg border border-indigo-100 flex gap-2">
+                    <input
+                      type="text"
+                      placeholder="New category name"
+                      value={newCategoryName}
+                      onChange={(e) => setNewCategoryName(e.target.value)}
+                      className="block w-full text-sm text-gray-900 border border-gray-300 rounded-lg bg-white focus:outline-none p-2"
+                    />
+                    <button
+                      onClick={handleAddCategory}
+                      disabled={loading || !newCategoryName}
+                      className="bg-indigo-600 text-white px-3 py-1 rounded-md text-sm font-medium hover:bg-indigo-700 disabled:opacity-50"
+                    >
+                      Add
+                    </button>
+                  </div>
+                )}
 
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Upload PDF Document

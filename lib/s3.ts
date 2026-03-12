@@ -12,24 +12,26 @@ const s3Client = new S3Client({
 });
 
 export const uploadFileToS3 = async (filePath: string, s3KeyPath: string): Promise<string> => {
+  const fileBuffer = await fs.readFile(filePath);
+  return uploadBufferToS3(fileBuffer, s3KeyPath, mime.lookup(filePath) || 'application/octet-stream');
+};
+
+export const uploadBufferToS3 = async (buffer: Buffer, s3KeyPath: string, contentType: string = 'application/octet-stream'): Promise<string> => {
   const bucketName = process.env.AWS_S3_BUCKET_NAME;
   if (!bucketName) throw new Error('AWS_S3_BUCKET_NAME is not configured');
 
   const folder = process.env.AWS_S3_FOLDER;
   const fullS3KeyPath = folder ? `${folder}/${s3KeyPath}`.replace(/\/+/g, '/') : s3KeyPath;
 
-  const fileBuffer = await fs.readFile(filePath);
-  const contentType = mime.lookup(filePath) || 'application/octet-stream';
-
   const command = new PutObjectCommand({
     Bucket: bucketName,
     Key: fullS3KeyPath,
-    Body: fileBuffer,
+    Body: buffer,
     ContentType: contentType,
   });
 
   await s3Client.send(command);
 
   // Return the public URL
-  return `https://${bucketName}.s3.${process.env.AWS_REGION}.amazonaws.com/${fullS3KeyPath}`;
+  return `https://${bucketName}.s3.${process.env.AWS_REGION || 'ap-south-1'}.amazonaws.com/${fullS3KeyPath}`;
 };

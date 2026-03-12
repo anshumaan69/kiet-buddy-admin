@@ -6,6 +6,15 @@ import { ScrapeRun } from '../../../models/ScrapeRun';
 import { spawn } from 'child_process';
 import path from 'path';
 import fs from 'fs/promises';
+import pdfParse from 'pdf-parse';
+
+async function parseS3Pdf(url: string): Promise<string> {
+  const response = await fetch(url);
+  if (!response.ok) throw new Error(`Failed to fetch PDF from S3: ${response.statusText}`);
+  const buffer = Buffer.from(await response.arrayBuffer());
+  const data = await pdfParse(buffer);
+  return data.text;
+}
 
 // Helper to wrap the callback-based spawn block
 function runScraper(scraperDir: string, filePath?: string): Promise<{code: number | null, logs: string}> {
@@ -47,8 +56,43 @@ export async function POST(req: Request) {
 
     const { filePath, category } = await req.json().catch(() => ({}));
 
-    // Use category in S3 paths if provided
-    const categorySegment = category ? `${category.replace(/\s+/g, '_')}/` : '';
+    const isVercel = process.env.VERCEL === '1' || !!process.env.VERCEL;
+
+    if (filePath) {
+      // MANUAL PDF PROCESSING (S3-based, works on Vercel)
+      console.log(`Processing manual S3 upload: ${filePath}`);
+      const extractedText = await parseS3Pdf(filePath);
+      
+      const fileName = path.basename(filePath);
+      const jsonData = [{
+        url: filePath,
+        page_title: fileName,
+        heading: category || "Manual PDF Document",
+        main_content: [extractedText],
+        pdf_content: { [fileName]: extractedText }
+      }];
+
+      await dbConnect();
+      const newRun = await ScrapeRun.create({
+        departmentTriggeredBy: session.user.department || session.user.role,
+        category: category || 'Manual Upload',
+        heading: category || "Manual PDF Document",
+        scrapedData: jsonData,
+        runDate: new Date(),
+      });
+
+      return NextResponse.json({ 
+        message: 'Manual PDF processed and stored in DB successfully', 
+        run: newRun 
+      });
+    }
+
+    // FULL WEB SCRAPE (Requires local Python environment)
+    if (isVercel) {
+      return NextResponse.json({ 
+        error: 'Full Web Scrape is not available on Vercel. Please use Manual PDF Upload.' 
+      }, { status: 400 });
+    }
 
     const scraperDir = path.join(process.cwd(), '..', 'kiet-scraper');
     const scraperScript = path.join(scraperDir, 'scraper.py');
@@ -59,9 +103,9 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Scraper script not found at expected location' }, { status: 500 });
     }
 
-    console.log(`Starting scrape using python script: ${scraperScript} ${filePath ? `--file ${filePath}` : ''}`);
+    console.log(`Starting scrape using python script: ${scraperScript}`);
 
-    const { code, logs } = await runScraper(scraperDir, filePath);
+    const { code, logs } = await runScraper(scraperDir);
     console.log(`Python scraper finished with code ${code}`);
 
     if (code !== 0) {

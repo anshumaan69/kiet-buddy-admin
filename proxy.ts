@@ -1,10 +1,13 @@
 import { withAuth } from 'next-auth/middleware';
 import { NextResponse } from 'next/server';
 
-export default withAuth(
+// Named export for Next.js 16 Proxy
+export const proxy = withAuth(
   function proxy(req) {
     const token = req.nextauth.token;
     const path = req.nextUrl.pathname;
+    
+    console.log(`Proxy running for: ${path}`, { hasToken: !!token, role: token?.role });
 
     if (!token) {
       return NextResponse.redirect(new URL('/login', req.url));
@@ -15,12 +18,12 @@ export default withAuth(
     }
 
     if (path.startsWith('/department') && token.role !== 'admin') {
-      // If a superadmin tries to access department routes without building special access,
-      // it restricts them here. If you want superadmin to access anything, change this logic.
       if (token.role !== 'superadmin') {
         return NextResponse.redirect(new URL('/unauthorized', req.url));
       }
     }
+    
+    return NextResponse.next();
   },
   {
     callbacks: {
@@ -31,6 +34,9 @@ export default withAuth(
     },
   }
 );
+
+// Also dynamic export default for compatibility if needed
+export default proxy;
 
 export const config = {
   matcher: ['/super-admin/:path*', '/department/:path*'],
