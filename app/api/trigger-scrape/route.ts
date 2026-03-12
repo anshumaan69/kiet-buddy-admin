@@ -77,6 +77,7 @@ export async function POST(req: Request) {
         departmentTriggeredBy: session.user.department || session.user.role,
         category: category || 'Manual Upload',
         heading: category || "Manual PDF Document",
+        s3Url: filePath,
         scrapedData: jsonData,
         runDate: new Date(),
       });

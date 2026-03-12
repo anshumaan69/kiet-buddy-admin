@@ -5,6 +5,7 @@ export interface IScrapeRun extends Document {
   departmentTriggeredBy: string;
   category?: string;
   heading: string;
+  s3Url?: string;
   scrapedData: any;
 }
 
@@ -14,6 +15,7 @@ const ScrapeRunSchema: Schema<IScrapeRun> = new Schema(
     departmentTriggeredBy: { type: String, required: true },
     category: { type: String },
     heading: { type: String, required: true },
+    s3Url: { type: String },
     scrapedData: { type: Schema.Types.Mixed, required: true },
   },
   { timestamps: true }
