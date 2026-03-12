@@ -10,9 +10,12 @@ export default function StaticDataDashboard() {
   const router = useRouter();
 
   const [records, setRecords] = useState<any[]>([]);
+  const [categories, setCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [showAddCategory, setShowAddCategory] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
 
   // Form State
   const [formData, setFormData] = useState({
@@ -27,10 +30,11 @@ export default function StaticDataDashboard() {
   useEffect(() => {
     if (status === 'unauthenticated') {
       router.push('/login');
-    } else if (session?.user?.role && session.user.role !== 'admin') {
+    } else if (session?.user?.role && session.user.role !== 'admin' && session.user.role !== 'superadmin') {
       router.push('/unauthorized');
     } else if (status === 'authenticated') {
       fetchRecords();
+      fetchCategories();
     }
   }, [status, session, router]);
 
@@ -44,6 +48,43 @@ export default function StaticDataDashboard() {
       }
     } catch (err) {
       setError('Failed to fetch records');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchCategories = async () => {
+    try {
+      const res = await fetch('/api/categories');
+      if (res.ok) {
+        const data = await res.json();
+        setCategories(data);
+      }
+    } catch (err) {
+      console.error('Failed to fetch categories', err);
+    }
+  };
+
+  const handleAddCategory = async () => {
+    if (!newCategoryName) return;
+    setLoading(true);
+    try {
+      const res = await fetch('/api/categories', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: newCategoryName }),
+      });
+      if (res.ok) {
+        setNewCategoryName('');
+        setShowAddCategory(false);
+        fetchCategories();
+        setSuccess('Category added successfully!');
+      } else {
+        const data = await res.json();
+        setError(data.error || 'Failed to add category');
+      }
+    } catch (err) {
+      setError('Failed to add category');
     } finally {
       setLoading(false);
     }
@@ -157,14 +198,51 @@ export default function StaticDataDashboard() {
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Fees, Admission"
-                  value={formData.category}
-                  onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
-                />
+                <div className="flex gap-2 mb-2">
+                  <select
+                    required
+                    value={formData.category}
+                    onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 outline-none transition-all bg-white text-gray-900"
+                  >
+                    <option value="">Select a Category</option>
+                    {categories.map((cat) => (
+                      <option key={cat._id} value={cat.name}>
+                        {cat.name}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    onClick={() => setShowAddCategory(!showAddCategory)}
+                    className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg border border-blue-200 transition-colors"
+                    title="Add new category"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                    </svg>
+                  </button>
+                </div>
+
+                {showAddCategory && (
+                  <div className="mt-2 mb-4 p-3 bg-blue-50 rounded-lg border border-blue-100 flex gap-2">
+                    <input
+                      type="text"
+                      placeholder="New category name"
+                      value={newCategoryName}
+                      onChange={(e) => setNewCategoryName(e.target.value)}
+                      className="block w-full text-sm text-gray-900 border border-gray-300 rounded-lg bg-white focus:outline-none p-2"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleAddCategory}
+                      disabled={loading || !newCategoryName}
+                      className="bg-blue-600 text-white px-3 py-1 rounded-md text-sm font-medium hover:bg-blue-700 disabled:opacity-50"
+                    >
+                      Add
+                    </button>
+                  </div>
+                )}
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Key</label>
@@ -174,7 +252,7 @@ export default function StaticDataDashboard() {
                   placeholder="e.g. Tuition Fee"
                   value={formData.key}
                   onChange={(e) => setFormData({ ...formData, key: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-gray-900"
                 />
               </div>
               <div>
@@ -185,7 +263,7 @@ export default function StaticDataDashboard() {
                   placeholder="e.g. 1,50,000 per year"
                   value={formData.value}
                   onChange={(e) => setFormData({ ...formData, value: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 outline-none transition-all resize-none"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 outline-none transition-all resize-none text-gray-900"
                 />
               </div>
               
