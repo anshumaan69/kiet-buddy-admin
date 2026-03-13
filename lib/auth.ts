@@ -35,7 +35,7 @@ export const authOptions: NextAuthOptions = {
           id: user._id.toString(),
           email: user.email,
           role: user.role,
-          department: user.department,
+          departments: user.departments,
         };
       },
     }),
@@ -48,15 +48,15 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         token.id = user.id;
         token.role = user.role;
-        token.department = user.department;
+        token.departments = user.departments;
       }
       return token;
     },
     async session({ session, token }) {
       if (token) {
-        session.user.id = token.id;
-        session.user.role = token.role;
-        session.user.department = token.department;
+        session.user.id = token.id as string;
+        session.user.role = token.role as 'admin' | 'superadmin';
+        session.user.departments = token.departments as string[];
       }
       return session;
     },

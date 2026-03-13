@@ -54,7 +54,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { filePath, category } = await req.json().catch(() => ({}));
+    const { filePath, category, customFileName } = await req.json().catch(() => ({}));
 
     const isVercel = process.env.VERCEL === '1' || !!process.env.VERCEL;
 
@@ -74,12 +74,14 @@ export async function POST(req: Request) {
 
       await dbConnect();
       const newRun = await ScrapeRun.create({
-        departmentTriggeredBy: session.user.department || session.user.role,
+        departmentTriggeredBy: session.user.departments?.[0] || session.user.role,
         category: category || 'Manual Upload',
         heading: category || "Manual PDF Document",
         s3Url: filePath,
         scrapedData: jsonData,
         runDate: new Date(),
+        uploadedBy: session.user.email,
+        fileName: customFileName || path.basename(filePath),
       });
 
       return NextResponse.json({ 
@@ -129,11 +131,12 @@ export async function POST(req: Request) {
 
       // Create the history run document
       const newRun = await ScrapeRun.create({
-        departmentTriggeredBy: session.user.department || session.user.role,
+        departmentTriggeredBy: session.user.departments?.[0] || session.user.role,
         category: category || 'Automated Scrape',
         heading: heading,
         scrapedData: jsonData,
         runDate: new Date(),
+        uploadedBy: session.user.email,
       });
 
       return NextResponse.json({ 

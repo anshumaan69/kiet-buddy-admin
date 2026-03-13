@@ -2,12 +2,23 @@
 
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import { Suspense } from 'react';
 
 export default function StaticDataDashboard() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center text-gray-500">Loading Dashboard...</div>}>
+      <StaticDataContent />
+    </Suspense>
+  );
+}
+
+function StaticDataContent() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const currentDept = searchParams.get('name');
 
   const [records, setRecords] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
@@ -32,6 +43,8 @@ export default function StaticDataDashboard() {
       router.push('/login');
     } else if (session?.user?.role && session.user.role !== 'admin' && session.user.role !== 'superadmin') {
       router.push('/unauthorized');
+    } else if (currentDept && !session.user.departments?.includes(currentDept) && session.user.role !== 'superadmin') {
+      router.push('/unauthorized');
     } else if (status === 'authenticated') {
       fetchRecords();
       fetchCategories();
@@ -41,7 +54,7 @@ export default function StaticDataDashboard() {
   const fetchRecords = async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/records');
+      const res = await fetch(`/api/records?department=${currentDept || ''}`);
       if (res.ok) {
         const data = await res.json();
         setRecords(data);
@@ -99,7 +112,12 @@ export default function StaticDataDashboard() {
     const method = isEditing ? 'PUT' : 'POST';
     const body = isEditing 
       ? JSON.stringify({ ...formData }) 
-      : JSON.stringify({ category: formData.category, key: formData.key, value: formData.value });
+      : JSON.stringify({ 
+          category: formData.category, 
+          key: formData.key, 
+          value: formData.value,
+          department: currentDept 
+        });
 
     try {
       const res = await fetch('/api/records', {
@@ -165,13 +183,15 @@ export default function StaticDataDashboard() {
       {/* Header & Tabs */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Static Data Management</h1>
+          <h1 className="text-3xl font-bold text-gray-900">
+            {currentDept ? `${currentDept} Static Data` : 'Static Data Management'}
+          </h1>
           <p className="text-gray-500 mt-1">
-            Build and manage your department's repository of key information (Category &rarr; Key &rarr; Value).
+            Build and manage {currentDept || "your department's"} repository of key information (Category &rarr; Key &rarr; Value).
           </p>
         </div>
         <div className="flex bg-gray-100 p-1 rounded-lg">
-          <Link href="/department" className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 rounded-md transition-colors">
+          <Link href={currentDept ? `/department?name=${currentDept}` : "/department"} className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 rounded-md transition-colors">
             Policy Scrapers
           </Link>
           <span className="bg-white shadow-sm px-4 py-2 text-sm font-medium text-blue-600 rounded-md">

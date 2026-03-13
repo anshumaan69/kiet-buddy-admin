@@ -4,7 +4,7 @@ export interface IUser extends Document {
   email: string;
   password?: string;
   role: 'admin' | 'superadmin';
-  department?: string; // e.g., 'CSE', 'ECE', 'IT' (mainly for admins)
+  departments?: string[]; // e.g., ['CSE', 'ECE', 'IT'] (mainly for admins)
 }
 
 const UserSchema: Schema<IUser> = new Schema(
@@ -25,8 +25,8 @@ const UserSchema: Schema<IUser> = new Schema(
       enum: ['admin', 'superadmin'],
       default: 'admin',
     },
-    department: {
-      type: String,
+    departments: {
+      type: [String],
       required: function() {
         return this.role === 'admin';
       },

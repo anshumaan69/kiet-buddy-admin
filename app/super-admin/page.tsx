@@ -12,9 +12,23 @@ export default function SuperAdminDashboard() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [role, setRole] = useState('admin');
-  const [department, setDepartment] = useState('');
+  const [selectedDepartments, setSelectedDepartments] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  const departmentsList = [
+    'Information Technology',
+    'CSIT',
+    'CSE',
+    'ECE',
+    'Mech',
+    'Administrative',
+    'MBA',
+    'Pharmacy',
+    'Civil',
+    'EN',
+    'MCA'
+  ];
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -47,7 +61,7 @@ export default function SuperAdminDashboard() {
       const res = await fetch('/api/users', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password, role, department }),
+        body: JSON.stringify({ email, password, role, departments: selectedDepartments }),
       });
 
       const data = await res.json();
@@ -57,7 +71,7 @@ export default function SuperAdminDashboard() {
       } else {
         setEmail('');
         setPassword('');
-        setDepartment('');
+        setSelectedDepartments([]);
         fetchUsers();
       }
     } catch (err) {
@@ -127,15 +141,26 @@ export default function SuperAdminDashboard() {
             
             {role === 'admin' && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Department Name</label>
-                <input
-                  type="text"
-                  required={role === 'admin'}
-                  value={department}
-                  onChange={(e) => setDepartment(e.target.value)}
-                  placeholder="e.g. CSE"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
-                />
+                <label className="block text-sm font-medium text-gray-700 mb-2">Departments (Permissions)</label>
+                <div className="grid grid-cols-2 gap-2 p-3 border border-gray-200 rounded-lg max-h-48 overflow-y-auto">
+                  {departmentsList.map((dept) => (
+                    <label key={dept} className="flex items-center space-x-2 text-sm text-gray-700 cursor-pointer hover:bg-gray-50 p-1 rounded transition-colors">
+                      <input
+                        type="checkbox"
+                        checked={selectedDepartments.includes(dept)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedDepartments([...selectedDepartments, dept]);
+                          } else {
+                            setSelectedDepartments(selectedDepartments.filter((d) => d !== dept));
+                          }
+                        }}
+                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      />
+                      <span>{dept}</span>
+                    </label>
+                  ))}
+                </div>
               </div>
             )}
             
@@ -173,7 +198,15 @@ export default function SuperAdminDashboard() {
                         {user.role}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{user.department || '-'}</td>
+                    <td className="px-6 py-4 text-sm text-gray-500">
+                      <div className="flex flex-wrap gap-1">
+                        {user.departments?.map((d: string) => (
+                          <span key={d} className="px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded text-[10px] font-medium border border-gray-200">
+                            {d}
+                          </span>
+                        )) || '-'}
+                      </div>
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <button
                         onClick={() => handleDeleteUser(user._id)}

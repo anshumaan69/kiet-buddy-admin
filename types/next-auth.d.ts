@@ -6,14 +6,14 @@ declare module 'next-auth' {
     user: {
       id: string;
       role: 'admin' | 'superadmin';
-      department?: string;
+      departments?: string[];
     } & DefaultSession['user'];
   }
 
   interface User extends DefaultUser {
     id: string;
     role: 'admin' | 'superadmin';
-    department?: string;
+    departments?: string[];
   }
 }
 

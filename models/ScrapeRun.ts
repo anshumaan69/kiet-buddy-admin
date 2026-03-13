@@ -7,6 +7,8 @@ export interface IScrapeRun extends Document {
   heading: string;
   s3Url?: string;
   scrapedData: any;
+  uploadedBy?: string; // User email
+  fileName?: string;
 }
 
 const ScrapeRunSchema: Schema<IScrapeRun> = new Schema(
@@ -17,6 +19,8 @@ const ScrapeRunSchema: Schema<IScrapeRun> = new Schema(
     heading: { type: String, required: true },
     s3Url: { type: String },
     scrapedData: { type: Schema.Types.Mixed, required: true },
+    uploadedBy: { type: String },
+    fileName: { type: String },
   },
   { timestamps: true }
 );

@@ -29,7 +29,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { email, password, role, department } = await req.json();
+    const { email, password, role, departments } = await req.json();
 
     if (!email || !password || !role) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
@@ -47,10 +47,10 @@ export async function POST(req: Request) {
       email,
       password: hashedPassword,
       role,
-      department: role === 'admin' ? department : undefined,
+      departments: role === 'admin' ? departments : undefined,
     });
 
-    return NextResponse.json({ message: 'User created', user: { email: newUser.email, role: newUser.role, department: newUser.department, _id: newUser._id } }, { status: 201 });
+    return NextResponse.json({ message: 'User created', user: { email: newUser.email, role: newUser.role, departments: newUser.departments, _id: newUser._id } }, { status: 201 });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

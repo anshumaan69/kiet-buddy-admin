@@ -12,10 +12,25 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const url = new URL(req.url);
+    const department = url.searchParams.get('department');
+    
     await dbConnect();
     
-    // Superadmins see everything, admins see only their department
-    const query = session.user.role === 'superadmin' ? {} : { department: session.user.department };
+    let query: any = {};
+    if (session.user.role !== 'superadmin') {
+      if (department) {
+        if (!session.user.departments?.includes(department)) {
+          return NextResponse.json({ error: 'Unauthorized for this department' }, { status: 403 });
+        }
+        query.department = department;
+      } else {
+        query.department = { $in: session.user.departments };
+      }
+    } else if (department) {
+      query.department = department;
+    }
+
     const records = await ExtractedData.find(query).sort({ updatedAt: -1 });
 
     return NextResponse.json(records);
@@ -32,15 +47,19 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { category, key, value } = await req.json();
-    if (!category || !key || !value) {
-      return NextResponse.json({ error: 'Category, Key, and Value are required' }, { status: 400 });
+    const { category, key, value, department } = await req.json();
+    if (!category || !key || !value || !department) {
+      return NextResponse.json({ error: 'Department, Category, Key, and Value are required' }, { status: 400 });
+    }
+
+    if (session.user.role !== 'superadmin' && !session.user.departments?.includes(department)) {
+      return NextResponse.json({ error: 'Unauthorized for this department' }, { status: 403 });
     }
 
     await dbConnect();
     
     const newRecord = await ExtractedData.create({
-      department: session.user.department,
+      department,
       category,
       key,
       value
@@ -60,7 +79,7 @@ export async function PUT(req: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { id, category, key, value } = await req.json();
+    const { id, category, key, value, department } = await req.json();
 
     if (!id) {
       return NextResponse.json({ error: 'Record ID is required' }, { status: 400 });
@@ -68,8 +87,16 @@ export async function PUT(req: Request) {
 
     await dbConnect();
     
-    // Ensure the record belongs to the admin's department
-    const record = await ExtractedData.findOne({ _id: id, department: session.user.department });
+    // Find record first to check current department
+    const record = await ExtractedData.findById(id);
+    if (!record) {
+      return NextResponse.json({ error: 'Record not found' }, { status: 404 });
+    }
+
+    // Check permissions
+    if (session.user.role !== 'superadmin' && !session.user.departments?.includes(record.department)) {
+      return NextResponse.json({ error: 'Unauthorized to modify this record' }, { status: 403 });
+    }
     
     if (!record) {
       return NextResponse.json({ error: 'Record not found or unauthorized' }, { status: 404 });
@@ -103,7 +130,17 @@ export async function DELETE(req: Request) {
     }
 
     await dbConnect();
-    const result = await ExtractedData.findOneAndDelete({ _id: id, department: session.user.department });
+    const record = await ExtractedData.findById(id);
+
+    if (!record) {
+      return NextResponse.json({ error: 'Record not found' }, { status: 404 });
+    }
+
+    if (session.user.role !== 'superadmin' && !session.user.departments?.includes(record.department)) {
+      return NextResponse.json({ error: 'Unauthorized to delete this record' }, { status: 403 });
+    }
+
+    await ExtractedData.findByIdAndDelete(id);
 
     if (!result) {
       return NextResponse.json({ error: 'Record not found or unauthorized to delete' }, { status: 404 });
