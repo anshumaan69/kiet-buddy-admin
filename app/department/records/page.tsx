@@ -41,11 +41,11 @@ function StaticDataContent() {
   useEffect(() => {
     if (status === 'unauthenticated') {
       router.push('/login');
-    } else if (session?.user?.role && session.user.role !== 'admin' && session.user.role !== 'superadmin') {
+    } else if (session?.user && session.user.role !== 'admin' && session.user.role !== 'superadmin') {
       router.push('/unauthorized');
-    } else if (currentDept && !session.user.departments?.includes(currentDept) && session.user.role !== 'superadmin') {
+    } else if (currentDept && session?.user && !session.user.departments?.includes(currentDept) && session.user.role !== 'superadmin') {
       router.push('/unauthorized');
-    } else if (status === 'authenticated') {
+    } else if (status === 'authenticated' && session) {
       fetchRecords();
       fetchCategories();
     }

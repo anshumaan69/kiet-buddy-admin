@@ -25,7 +25,7 @@ export default function Navbar() {
                 <div className="flex flex-col text-right">
                   <span className="text-sm font-medium text-gray-900">{session.user.email}</span>
                   <span className="text-xs text-gray-500 capitalize">
-                    {session.user.role} {session.user.department ? `(${session.user.department})` : ''}
+                    {session.user.role} {session.user.departments?.[0] ? `(${session.user.departments[0]})` : ''}
                   </span>
                 </div>
                 <button

@@ -80,7 +80,7 @@ export async function POST(req: Request) {
         s3Url: filePath,
         scrapedData: jsonData,
         runDate: new Date(),
-        uploadedBy: session.user.email,
+        uploadedBy: session.user.email ?? undefined,
         fileName: customFileName || path.basename(filePath),
       });
 
@@ -136,7 +136,7 @@ export async function POST(req: Request) {
         heading: heading,
         scrapedData: jsonData,
         runDate: new Date(),
-        uploadedBy: session.user.email,
+        uploadedBy: session.user.email ?? undefined,
       });
 
       return NextResponse.json({ 
